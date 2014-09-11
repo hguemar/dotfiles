@@ -1,0 +1,49 @@
+[user]
+	name = Haikel Guemar
+	email = hguemar@fedoraproject.org
+[color]
+	ui = always
+[giggle]
+	main-window-maximized = true
+	main-window-geometry = 0x0+0+0
+	main-window-view = HistoryView
+	history-view-vpane-position = 403
+[core]
+	excludesfile = /home/haikel/.gitignore
+[alias]
+	glog = log --graph --decorate=full
+	rpull = pull --rebase
+	st = status -sb
+	who = shortlog -sne
+	ci = commit
+	co = checkout
+	staged = diff --cached
+	fixup = commit --amend -C HEAD
+	wdiff = diff --word-diff
+	undo = reset --soft HEAD~1
+	filter-out = filter-branch --prune-empty --subdirectory-filter
+	br = branch
+	sweep = stash --keep-index
+	unstage = reset HEAD
+	rename = branch -m
+	pick = !sh -c \"(git cherry-pick -n $1 && git reset HEAD && git add -p && git commit -c $1) || git reset --hard\"
+	purr = pull --rebase
+	rb = rebase
+	rbi = rebase -i
+	amend = commit --amend
+	incoming = whatchanged ..FETCH_HEAD
+	outgoing = whatchanged FETCH_HEAD..
+	unadd = rm -r --cached
+	lol = log --graph --decorate --pretty=oneline --abbrev-commit
+	lola = log --graph --decorate --pretty=oneline --abbrev-commit -all
+	discard = checkout -- .
+	nuke = branch -D
+	patch = diff --no-color
+	lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+[push]
+	default = upstream
+[help]
+	autocorrect = 20
+[diff]
+	mnemonicprefix = true
+	tool = /usr/bin/meld
