@@ -1,0 +1,343 @@
+#compdef fedpkg
+
+#compdef fedpkg
+
+_fedpkg_help_args=( {-h,--help}'[show the help message]' )
+_fedpkg_arches_array=( noarch i386 x86_64 ppc ppc64 s390x )
+_fedpkg_arches_regex="(${(j:|:)_fedpkg_arches_array})"
+_fedpkg_arches="('${(j:' ':)_fedpkg_arches_array}')"
+_fedpkg_branches_array=( "master" "f"{1..20} )
+_fedpkg_branches="('${(j:' ':)_fedpkg_branches_array}')"
+
+# Main dispatcher
+_fedpkg ()
+{
+    local curcontext="$curcontext" state lstate line
+
+    _arguments -s \
+        $_fedpkg_help_args \
+        {-u,--user}'[username]:username' \
+        '--path[directory to interact with instead of current dir]:path:_dirs' \
+        '-v[verbose]' \
+        '-q[only display errors]' \
+        '*::fedpkg command:_fedpkg_command'
+}
+
+(( $+functions[_fedpkg_command] )) || _fedpkg_command ()
+{
+    local -a _fedpkg_cmds
+    _fedpkg_cmds=(
+        "help:show usage"
+        "build:request build"
+        "chain-build:build current package in order with other packages"
+        "clean:remove untracked files"
+        "clog:make a clog file containing top changelog entry"
+        {clone,co}":clone and checkout a module"
+        "commit:commit changes"
+        "compile:local test rpmbuild compile"
+        "diff:show changes between commits, commit and working tree, etc"
+        "gimmespec:print spec file name"
+        "import:import content into a module"
+        "install:local test rpmbuild install"
+        "lint:run rpmlint against local build output"
+        "local:local test rpmbuild binary"
+        "mockbuild:local test build using mock"
+        "new:diff against last tag"
+        "new-sources:upload new source files"
+        "patch:create and add a gendiff patch file"
+        "prep:local test rpmbuild prep"
+        "push:push changes to remote repository"
+        "scratch-build:request scratch build"
+        "sources:download source files"
+        "srpm:create a source rpm"
+        "switch-branch:switch release branches"
+        "tag-request:submit last build as a releng tag request"
+        "unused-patches:print list of patches not referenced by name in specfile"
+        "update:submit last build as an update"
+        "upload:upload source files"
+        "verrel:print the name-version-release"
+    )
+
+    if (( CURRENT == 1 )); then
+        _describe -t commands 'fedpkg command' _fedpkg_cmds || compadd "$@"
+    else
+        local curcontext="$curcontext"
+
+        cmd="${${_fedpkg_cmds[(r)$words[1]:*]%%:*}}"
+        # Deal with any aliases
+        case $cmd in
+            co) cmd="clone";;
+        esac
+
+        if (( $#cmd )); then
+            curcontext="${curcontext%:*:*}:fedpkg-${cmd}:"
+
+            local update_policy
+            zstyle -s ":completion:${curcontext}:" cache-policy update_policy
+            if [[ -z "$update_policy" ]]; then
+                zstyle ":completion:${curcontext}:" cache-policy _fedpkg_caching_policy
+            fi
+
+            _call_function ret _fedpkg_$cmd || _fedpkg_help_arg
+        else
+            _message "unknown fedpkg command: $words[1]"
+        fi
+
+        return ret
+    fi
+}
+
+# Ripped from _git, any way to access it without copy/paste?
+(( $+functions[__git_command_successful] )) ||
+__git_command_successful () {
+  if (( ${#pipestatus:#0} > 0 )); then
+    _message 'not a git repository'
+    return 1
+  fi
+  return 0
+}
+
+(( $+functions[__git_files] )) ||
+__git_files () {
+  local expl files ls_opts opts gitdir
+
+  zparseopts -D -E -a opts -- -cached -deleted -modified -others -ignored -unmerged -killed
+
+  gitdir=$(_call_program gitdir git rev-parse --git-dir 2>/dev/null)
+  __git_command_successful || return
+
+  ls_opts=("--exclude-per-directory=.gitignore")
+  [[ -f "$gitdir/info/exclude" ]] && ls_opts+="--exclude-from=$gitdir/info/exclude"
+
+  files=(${(ps:\0:)"$(_call_program files git ls-files -z $ls_opts $opts 2>/dev/null)"})
+  __git_command_successful || return
+
+  _wanted files expl 'index file' _multi_parts $@ - / files
+}
+
+
+# Help messages are ubiquitous
+(( $+functions[_fedpkg_help_arg] )) || _fedpkg_help_arg ()
+{
+    _arguments -s \
+        $_fedpkg_help_args
+}
+
+# Architecture completion
+(( $+functions[_fedpkg_arches_values] )) || _fedpkg_arches_values ()
+{
+    _values -s , 'architectures' \
+        $_fedpkg_arches_array
+}
+
+# Branch completion
+(( $+functions[_fedpkg_branch] )) || _fedpkg_branch ()
+{
+    local _branches
+    fedpkg switch-branch > /dev/null 2> /dev/null || return 1
+    _branches=( $(fedpkg switch-branch -l | sed -n -e 's!^ *!!;s!^origin/!!;/^master$/p;s!/master$!!p' | sort -u) )
+    _arguments -s \
+        ":branch:($_branches)"
+}
+
+# Package list completion
+(( $+functions[_fedpkg_packages] )) || _fedpkg_packages ()
+{
+    [[ -x koji ]] && return 1
+    if [[ ${+_pkgs} -eq 0 ]] || _cache_invalid SRPMS || ! _retrieve_cache SRPMS;
+    then
+        _pkgs=( $(koji list-pkgs | grep -v '^-*$' | sort -u 2>/dev/null) )
+        _store_cache SRPMS _pkgs
+    fi
+
+    _arguments -s \
+        ":packages:($_pkgs)"
+}
+
+# Completion function for srpm
+(( $+functions[_fedpkg_srpm] )) || _fedpkg_srpm ()
+{
+    _files "$expl[@]" -g "*.src.rpm"
+}
+
+# Completion function for compile|install
+(( $+functions[_fedpkg_local_build] )) || _fedpkg_local_build ()
+{
+    _arguments -s \
+        $_fedpkg_help_args \
+        "--arch[architecture to compile for]:architecture:$_fedpkg_arches" \
+        '--short-circuit[short circuit the compile]'
+}
+
+# Completion function for upload|new-sources
+(( $+functions[_fedpkg_upload_file] )) || _fedpkg_upload_file ()
+{
+    local _tar_files
+    local _docs
+    local _archives
+    local _other
+    local _langs
+
+    _tar_files='(tar|TAR).(gz|GZ|Z|bz2|xz)|tgz|tbz2?|tlz|txz'
+    _docs='pdf'
+    _archives='lzma|zip|cpio'
+    _langs='jar|war|egg|gem'
+    _other='rpm|db|jisp|tff|bin'
+
+    _files "$expl[@]" -g "*.($_tar_files|$_docs|$_archives|$_langs|$_other)"
+}
+
+# Completion function for build
+(( $+functions[_fedpkg_build] )) || _fedpkg_build ()
+{
+    _arguments \
+        $_fedpkg_help_args \
+        '--nowait[do not wait on the build]' \
+        '--background[run the build at a lower priority]' \
+        '--skip-tag[do not attempt to tag the package' \
+        '--scratch[perform a scratch build'
+}
+
+# Completion function for chain-build
+(( $+functions[_fedpkg_chain-build] )) || _fedpkg_chain-build ()
+{
+    _arguments -s \
+        $_fedpkg_help_args \
+        '--nowait[do not wait on the build]' \
+        '--background[run the build at a lower priority]' \
+        '*::Package:_fedpkg_packages' \
+        ':*\:Dependency separator:_fedpkg_packages'
+}
+
+# Completion function for clean
+(( $+functions[_fedpkg_clean] )) || _fedpkg_clean ()
+{
+    _arguments -s \
+        $_fedpkg_help_args \
+        {--dry-run,-n}'[perform a dry-run]' \
+        '-x[do not follow .gitignore rules]'
+}
+
+# Completion function for clone
+(( $+functions[_fedpkg_clone] )) || _fedpkg_clone ()
+{
+    _arguments -s \
+        $_fedpkg_help_args \
+        {-n,--dry-run}'[perform a dry-run]' \
+        '-x[do not follow .gitignore rules]' \
+        '::Package:_fedpkg_packages'
+}
+
+# Completion function for commit
+(( $+functions[_fedpkg_commit] )) || _fedpkg_commit ()
+{
+    _arguments -s \
+        $_fedpkg_help_args \
+        {-m,--message}'=[use the given message as the commit message]:message:' \
+        {-F,--file}'=[take the commit message from the given file]:file:_files' \
+        {-p,--push}'[commit and push as one action]' \
+        '::Repository files:__git_files'
+}
+
+# Completion function for compile
+(( $+functions[_fedpkg_compile] )) || _fedpkg_compile ()
+{
+    _fedpkg_local_build
+}
+
+# Completion function for diff
+(( $+functions[_fedpkg_diff] )) || _fedpkg_diff ()
+{
+    _arguments -s \
+        $_fedpkg_help_args \
+        '--cached[view staged changes]'
+        '::Repository files:__git_files'
+}
+
+# Completion function for import
+(( $+functions[_fedpkg_import] )) || _fedpkg_import ()
+{
+    _arguments -s \
+        $_fedpkg_help_args \
+        {-c,--create}'[create a new local repo]' \
+        "--branch=[branch to import to]:branch:$_fedpkg_branches" \
+        '::Source rpm:_fedpkg_srpm'
+}
+
+# Completion function for install
+(( $+functions[_fedpkg_install] )) || _fedpkg_install ()
+{
+    _fedpkg_local_build
+}
+
+# Completion function for local
+(( $+functions[_fedpkg_local] )) || _fedpkg_local ()
+{
+    _arguments -s \
+        $_fedpkg_help_args \
+        "--arch=[architecture to compile for]:architecture:$_fedpkg_arches" \
+        '--md5[use md5 checksums]'
+}
+
+# Completion function for new-sources
+(( $+functions[_fedpkg_new-sources] )) || _fedpkg_new-sources ()
+{
+    _fedpkg_upload_file
+}
+
+# Completion function for patch
+(( $+functions[_fedpkg_patch] )) || _fedpkg_patch ()
+{
+    _arguments -s \
+        $_fedpkg_help_args \
+        '--suffix=[suffix for the patch]' \
+        '--md5rediff[recreate gendiff file retaining comments]'
+}
+
+# Completion function for prep
+(( $+functions[_fedpkg_prep] )) || _fedpkg_prep ()
+{
+    _arguments -s \
+        $_fedpkg_help_args \
+        "--arch=[prep for a specific architecture]:architecture:$_fedpkg_arches"
+}
+
+# Completion function for scratch-build
+(( $+functions[_fedpkg_scratch-build] )) || _fedpkg_scratch-build ()
+{
+    _arguments -s \
+        $_fedpkg_help_args \
+        '--nowait[do not wait on the build]' \
+        '--background[run the build at a lower priority]' \
+        "*--arch=[build for specific arches]:architectures:_fedpkg_arches_values" \
+        '--srpm:Source rpm:_fedpkg_srpm'
+}
+
+# Completion function for switch-branch
+(( $+functions[_fedpkg_switch-branch] )) || _fedpkg_switch-branch ()
+{
+    _arguments -s \
+        $_fedpkg_help_args \
+        {-l,--list}'[list local and remote branches]' \
+        '::branch:_fedpkg_branch'
+}
+
+# Completion function for upload
+(( $+functions[_fedpkg_upload] )) || _fedpkg_upload ()
+{
+    _fedpkg_upload_file
+}
+
+_fedpkg_caching_policy ()
+{
+    local -a oldp
+
+    # rebuild if cache is more than a week old
+    oldp=( "$1"(mw+1) )
+    (( $#oldp )) && return 0
+
+    return 1
+}
+
+_fedpkg "$@"
+

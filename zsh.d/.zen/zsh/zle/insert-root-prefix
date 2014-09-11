@@ -1,0 +1,15 @@
+# Description: Insert sudo or pfexec in the beginning of the line
+# Version: 20090323191053
+# Author: asyd, bapt
+# vim: set syntax=zsh:
+local prefix
+case $(uname -s) in
+	"SunOS")
+		prefix="pfexec"
+	;;
+	*)
+		prefix="sudo"
+	;;
+esac
+BUFFER="$prefix $BUFFER"
+CURSOR=$(($CURSOR + $#prefix + 1))
