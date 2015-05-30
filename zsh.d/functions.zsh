@@ -170,6 +170,17 @@ function aws-profile {
 }
 
 
+# get libvirt domain IP
+function virt-ip {
+    local domain=$1
+    local tmpfile="/tmp/$RANDOM.xml"
+    virsh dumpxml $domain > $tmpfile 2>/dev/null || { echo "Domain $domain does not exist"; return 2 }
+    local mac=`xmllint --xpath 'string(//mac/@address)' $tmpfile`
+    rm $tmpfile
+    echo `arp -na | grep $mac | awk '{ data=gsub(/[()]/, "", $2); print $data }'`
+}
+
+
 # ssh to a libvirt domain
 function virt-ssh {
     # we need at least a domain name
@@ -179,7 +190,6 @@ function virt-ssh {
     local domain=""
     local user=""
     local uri=""
-    local tmpfile="/tmp/$RANDOM.xml"
 
     # parse input to retrieve user & domain
     if [[ ${#array[*]} == 2 ]]; then
@@ -190,10 +200,7 @@ function virt-ssh {
     fi
 
     # retrieve internal ip from the domain
-    virsh dumpxml $domain > $tmpfile 2>/dev/null || { echo "Domain $domain does not exist"; return 2 }
-    local mac=`xmllint --xpath 'string(//mac/@address)' $tmpfile`
-    rm $tmpfile
-    local ip=`arp -na | grep $mac | awk '{ data=gsub(/[()]/, "", $2); print $data }'`
+    local ip=`virt-ip $domain`
 
 
     # connect to the domain

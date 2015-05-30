@@ -13,6 +13,10 @@ alias md='mkdir'
 alias rd='rmdir'
 alias ll='ls -l'
 alias lz='ls -Z'
+alias ccat='pygmentize -g'
+function cless { 
+    pygmentize -g $1 | less -R
+}
 alias sudosh='sudo $SHELL'
 alias vbm='VBoxManage'
 alias startvm='VBoxManage startvm --type headless'

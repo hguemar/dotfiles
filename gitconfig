@@ -47,3 +47,5 @@
 [diff]
 	mnemonicprefix = true
 	tool = /usr/bin/meld
+[credential]
+	helper = gnome-keyring
