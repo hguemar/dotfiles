@@ -76,7 +76,8 @@ autoload -U zcalc
 autoload -U zmv
 
 # zftp
-zmodload zsh/zftp
+## FIXME: disabled because of missing freehostent symbol on F23
+#zmodload zsh/zftp
 autoload -U zfinit
 
 ##############################################################################
