@@ -24,6 +24,9 @@ zstyle ':completion::complete:*' use-cache 1
 zstyle ':completion:*:*:kill:*' menu yes select
 zstyle ':completion:*:*:kill:*:processes' list-colors "=(#b) #([0-9]#)*(#b)=36=31"
 
+# pew pew
+which pew &>/dev/null && source $(pew shell_config)
+
 # command not found handler
 function command_not_found_handler() {
   local command="$1"
