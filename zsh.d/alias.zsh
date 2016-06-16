@@ -1,6 +1,5 @@
 ## alias
 alias man='LANG=C man'
-alias screen='screenie'
 alias vi='vim'
 alias enox='emacs -nw'
 alias emw='emacs -nw'
