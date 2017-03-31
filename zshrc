@@ -115,3 +115,5 @@ source ~/.zsh.d/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 #THIS MUST BE AT THE END OF THE FILE FOR GVM TO WORK!!!
 [[ -s "/home/haikel/.gvm/bin/gvm-init.sh" ]] && source "/home/haikel/.gvm/bin/gvm-init.sh"
 
+
+export PATH="$PATH:$HOME/.rvm/bin" # Add RVM to PATH for scripting
