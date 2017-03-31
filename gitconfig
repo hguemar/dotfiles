@@ -41,6 +41,8 @@
 	nuke = branch -D
 	patch = diff --no-color
 	lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+	d = diff --src-prefix='a/ ' --dst-prefix='b/ '
+	cpick = cherry-pick
 [push]
 	default = upstream
 [help]
