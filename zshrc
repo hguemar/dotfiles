@@ -116,4 +116,7 @@ source ~/.zsh.d/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 [[ -s "/home/haikel/.gvm/bin/gvm-init.sh" ]] && source "/home/haikel/.gvm/bin/gvm-init.sh"
 
 
-export PATH="$PATH:$HOME/.rvm/bin:$HOME/.cargo/bin" # Add RVM to PATH for scripting
+export PATH="$HOME/.rvm/bin:$HOME/.cargo/bin:$PATH" # Add RVM to PATH for scripting
+
+# added by Pew
+source $(pew shell_config)

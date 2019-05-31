@@ -52,3 +52,7 @@
 	tool = /usr/bin/meld
 [credential]
 	helper = gnome-keyring
+[rebase]
+	autoSquash = true
+[github]
+	user = hguemar
